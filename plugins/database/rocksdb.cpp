@@ -203,12 +203,10 @@ Status RocksDBDatabasePlugin::setUp() {
   }
 
   for (const auto& cf_name : kDomains) {
-    if (cf_name != kEvents) {
-      auto compact_status = compactFiles(cf_name);
-      if (!compact_status.ok()) {
-        LOG(INFO) << "Cannot compact column family " << cf_name << ": "
-                  << compact_status.getMessage();
-      }
+    auto compact_status = compactFiles(cf_name);
+    if (!compact_status.ok()) {
+      LOG(INFO) << "Cannot compact column family " << cf_name << ": "
+                << compact_status.getMessage();
     }
   }
 
