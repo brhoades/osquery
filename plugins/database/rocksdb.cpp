@@ -141,9 +141,14 @@ Status RocksDBDatabasePlugin::setUp() {
         rocksdb::kDefaultColumnFamilyName, options_));
     domain_set.insert(rocksdb::kDefaultColumnFamilyName);
 
+    // FIXME(document why events need ttl/periodic compaction)
+    rocksdb::ColumnFamilyOptions events_options(options_);
+    events_options.ttl = 24 * 60 * 60;
+    events_options.periodic_compaction_seconds = 7 * 24 * 60 * 60;
+
     for (const auto& cf_name : kDomains) {
-      column_families_.push_back(
-          rocksdb::ColumnFamilyDescriptor(cf_name, options_));
+      column_families_.push_back(rocksdb::ColumnFamilyDescriptor(
+          cf_name, cf_name == kEvents ? events_options : options_));
       domain_set.insert(cf_name);
     }
 
@@ -203,10 +208,12 @@ Status RocksDBDatabasePlugin::setUp() {
   }
 
   for (const auto& cf_name : kDomains) {
-    auto compact_status = compactFiles(cf_name);
-    if (!compact_status.ok()) {
-      LOG(INFO) << "Cannot compact column family " << cf_name << ": "
-                << compact_status.getMessage();
+    if (cf_name != kEvents) {
+      auto compact_status = compactFiles(cf_name);
+      if (!compact_status.ok()) {
+        LOG(INFO) << "Cannot compact column family " << cf_name << ": "
+                  << compact_status.getMessage();
+      }
     }
   }
 
