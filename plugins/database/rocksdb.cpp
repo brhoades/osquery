@@ -141,9 +141,16 @@ Status RocksDBDatabasePlugin::setUp() {
         rocksdb::kDefaultColumnFamilyName, options_));
     domain_set.insert(rocksdb::kDefaultColumnFamilyName);
 
+    // FIXME(document why events need ttl/periodic compaction)
+    rocksdb::ColumnFamilyOptions events_options(options_);
+    events_options.ttl = 24 * 60 * 60;
+    events_options.periodic_compaction_seconds = 7 * 24 * 60 * 60;
+
     for (const auto& cf_name : kDomains) {
-      column_families_.push_back(
-          rocksdb::ColumnFamilyDescriptor(cf_name, options_));
+      column_families_.push_back(rocksdb::ColumnFamilyDescriptor(
+            // events go in the queries column family due to kDomains
+            // lacking default
+          cf_name, cf_name == kQueries ? events_options : options_));
       domain_set.insert(cf_name);
     }
 
